@@ -1,0 +1,59 @@
+# PULSE — AI/ML Pipeline
+
+Behavioral Modeling & Synthetic Data + Personalization Engine & Nudge Generator.
+All synthetic data — no real user data anywhere in this pipeline.
+
+## Setup
+
+```
+pip install -r requirements.txt
+```
+
+`nudge_agent.py` and `risk_arbiter.py` call the Anthropic API. Without
+`ANTHROPIC_API_KEY` set as an environment variable, both fall back to
+template/default behavior automatically — the pipeline still runs end
+to end, just without real LLM reasoning.
+
+## Run order
+
+**Security path:**
+1. `synthetic_data.py` — generates raw behavioral sessions (keystrokes, navigation, device/network) for 40 simulated users, ~15% deliberately anomalous. Writes `raw_sessions.json`, `user_baselines.json`.
+2. `features.py` — converts raw sessions into the feature vector both the risk model and Backend's API schema depend on. Cadence and duration are z-scored against each user's own prior sessions (not the current or future ones); the first 5 sessions per user are flagged `is_cold_start` since there's no personal history yet to compare against. Writes `features.csv`.
+3. `risk_model.py` — two-tier scoring: full Isolation Forest for users with history, a device/network rule for cold-start sessions. Reports precision/recall/F1 for both tiers plus combined. Writes `risk_scores.csv`.
+
+**Personalization path:**
+4. `synthetic_transactions.py` — generates two months of balance history and balance-check timing per user. Writes `daily_balances.json`, `balance_checks.json`, `finance_baselines.json`.
+5. `personalization_engine.py` — clusters users into archetypes (K-Means on observed check timing) and projects whether each user's balance covers their next recurring payment, inferred from the balance history itself. Writes `personalization_profiles.json`.
+6. `nudge_agent.py` — LLM agent (Haiku) that turns a profile into a short, specific notification. Falls back to a template if no API key. Writes `nudges.json`.
+
+**Reasoning layer:**
+7. `risk_arbiter.py` — for sessions in the 0.4–0.7 borderline risk band, an LLM (Sonnet) reasons over context — device/network flags, the user's known rhythm, transaction amount vs. typical recurring payment — to decide approve / soft_challenge / block, instead of a flat threshold. Falls back to `soft_challenge` if no API key. Writes `arbitration_results.json`.
+
+Note: `transaction_amount` and the day-of-week context in `risk_arbiter.py`
+are synthesized for demo purposes — the behavioral sessions and the
+transaction timeline come from two separate simulations that don't share
+a real clock. In production both come from the same request, for free.
+
+## Live API (for Backend)
+
+The pipeline above is batch/offline. `api.py` wraps it into a live
+service Backend can actually call — see `API_CONTRACT.md` for exact
+request/response examples.
+
+```
+python3 model_training.py      # once, after features.csv exists
+uvicorn api:app --port 8000
+```
+
+Two endpoints: `POST /session/event` (send raw session data, get back
+a risk score and final decision in one call) and
+`GET /user/{user_id}/personalization` (dashboard data). Backend needs
+`API_CONTRACT.md`, not the seven pipeline scripts.
+
+## Known, stated limitations
+
+- Real behavioral biometric data isn't public anywhere — this is why everything is synthetic.
+- The 94–95% precision/recall numbers reflect clean synthetic separation; real behavioral data would be noisier.
+- Cold-start sessions (first 5 per user) show a real, measured recall drop (~63%) since there's no personal baseline yet — a genuine gap, not hidden.
+- `hour_deviation`, `device_change_flag`, and `network_change_flag` still compare against the hidden generator baseline rather than a learned one — an inconsistency with the (now-fixed) cadence/duration features, not yet resolved.
+- `nudge_agent.py` and `risk_arbiter.py` have not been run against a real API key — confirm both before relying on them in a live demo.
