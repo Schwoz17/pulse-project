@@ -50,6 +50,36 @@ a risk score and final decision in one call) and
 `GET /user/{user_id}/personalization` (dashboard data). Backend needs
 `API_CONTRACT.md`, not the seven pipeline scripts.
 
+## Backend Demo UI
+
+A lightweight demo app is provided under `backend/` that includes:
+- a mock banking event simulator capturing the exact screen names used by the risk model
+- enforced behavior for `approve`, `soft_challenge`, and `block`
+- a dashboard page showing personalization side by side with decision results
+
+A dedicated frontend implementation lives in `frontend/` with the full mock banking UI, event capture, and screen flow matching the model training data.
+
+Run the backend separately with:
+
+```
+uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+Run the frontend separately with:
+
+```
+cd frontend
+npm install
+VITE_API_BASE_URL=http://localhost:8000 npm run dev
+```
+
+Then open the URL shown by Vite (usually `http://localhost:4173`).
+
+## Deployment
+
+The repo includes a deploy-ready `Dockerfile` and `Procfile` for containerized hosting.
+The service can run on any platform that supports Docker or a standard Python web host.
+
 ## Known, stated limitations
 
 - Real behavioral biometric data isn't public anywhere — this is why everything is synthetic.

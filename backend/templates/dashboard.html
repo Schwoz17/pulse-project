@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PULSE Dashboard</title>
+    <link rel="stylesheet" href="/static/main.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>PULSE Dashboard</h1>
+        <p>Personalization profile for <strong>{{ user_id }}</strong>.</p>
+      </header>
+
+      <section class="panel grid-2">
+        <div>
+          <h2>Personalization Profile</h2>
+          <dl>
+            <dt>Archetype</dt>
+            <dd>{{ profile.archetype }}</dd>
+            <dt>Preferred check day</dt>
+            <dd>{{ profile.preferred_check_day }}</dd>
+            <dt>Preferred check hour</dt>
+            <dd>{{ profile.preferred_check_hour }}</dd>
+            <dt>Estimated recurring amount</dt>
+            <dd>{{ profile.estimated_recurring_amount }}</dd>
+            <dt>Days until due</dt>
+            <dd>{{ profile.days_until_due }}</dd>
+            <dt>Current balance</dt>
+            <dd>{{ profile.current_balance }}</dd>
+            <dt>Projected balance</dt>
+            <dd>{{ profile.projected_balance }}</dd>
+            <dt>Shortfall amount</dt>
+            <dd>{{ profile.shortfall_amount }}</dd>
+          </dl>
+        </div>
+
+        <div>
+          <h2>Live Decision</h2>
+          <p>Use the session simulator on the home page to send a live behavioral event and see the decision enforced there.</p>
+          <a class="button" href="/">Back to simulator</a>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

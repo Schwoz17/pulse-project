@@ -27,6 +27,7 @@ from typing import List, Optional
 import joblib
 import numpy as np
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from risk_arbiter import arbitrate
@@ -36,6 +37,13 @@ EPS = 1e-6
 LOW, HIGH = 0.4, 0.7  # borderline band routed to the LLM arbiter
 
 app = FastAPI(title="PULSE API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 bundle = joblib.load("model_bundle.joblib")
 MODEL = bundle["model"]

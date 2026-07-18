@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PULSE Demo UI</title>
+    <link rel="stylesheet" href="/static/main.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>PULSE Demo</h1>
+        <p>Mock banking UI with event capture, decision enforcement, and dashboard integration.</p>
+      </header>
+
+      <section class="panel">
+        <h2>Session Simulator</h2>
+        <div class="row">
+          <label>User ID</label>
+          <input id="userId" type="text" value="user_001" />
+        </div>
+        <div class="row">
+          <label>Network type</label>
+          <select id="networkType">
+            <option value="wifi_home">wifi_home</option>
+            <option value="mobile_public">mobile_public</option>
+            <option value="wifi_work">wifi_work</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Device fingerprint</label>
+          <input id="deviceHash" type="text" value="device-abc123" />
+        </div>
+
+        <div class="flow-buttons">
+          <button type="button" onclick="visitScreen('login')">Login</button>
+          <button type="button" onclick="visitScreen('dashboard')">Dashboard</button>
+          <button type="button" onclick="visitScreen('balance')">Balance</button>
+          <button type="button" onclick="visitScreen('transfer')">Transfer</button>
+          <button type="button" onclick="visitScreen('confirm')">Confirm</button>
+          <button type="button" onclick="visitScreen('logout')">Logout</button>
+        </div>
+
+        <div class="row">
+          <label>Current screen sequence</label>
+          <textarea id="sequence" readonly></textarea>
+        </div>
+        <div class="row">
+          <label>Keystroke input</label>
+          <input id="keystrokeInput" placeholder="Type transfer amount or note" />
+        </div>
+        <div class="row">
+          <label>Transfer amount</label>
+          <input id="transactionAmount" type="number" placeholder="Optional" />
+        </div>
+        <div class="row">
+          <button id="submitEvent" type="button">Submit Session Event</button>
+          <button id="resetSession" type="button" onclick="resetSession()">Reset Session</button>
+        </div>
+      </section>
+
+      <section class="panel" id="resultPanel" hidden>
+        <h2>Risk Decision</h2>
+        <div id="resultCard" class="result-card"></div>
+        <div id="actionArea"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Dashboard Lookup</h2>
+        <div class="row">
+          <label>Dashboard user ID</label>
+          <input id="dashboardUserId" type="text" value="user_001" />
+          <button type="button" onclick="openDashboard()">Open Dashboard</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
