@@ -26,7 +26,7 @@ from typing import List, Optional
 
 import joblib
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -93,8 +93,20 @@ def score_session(event: SessionEvent):
     hist = USER_HISTORY[event.user_id]
     is_cold_start = len(hist["cadence_mean"]) < MIN_HISTORY
 
-    cadence_mean = float(np.mean(event.keystroke_intervals))
-    cadence_std = float(np.std(event.keystroke_intervals))
+    # A session can legitimately have zero keystrokes -- e.g. a plain
+    # login -> balance -> logout with no typing at all. np.mean/np.std
+    # of an empty array is NaN, which would silently poison the
+    # Isolation Forest features and manufacture a false high-risk score
+    # for an established user doing nothing suspicious. When there's no
+    # typing to measure, treat cadence as "matches this user's own
+    # typical cadence" (z-score of 0) instead of leaving it undefined.
+    has_keystrokes = len(event.keystroke_intervals) > 0
+    if has_keystrokes:
+        cadence_mean = float(np.mean(event.keystroke_intervals))
+        cadence_std = float(np.std(event.keystroke_intervals))
+    else:
+        cadence_mean = float(np.mean(hist["cadence_mean"])) if hist["cadence_mean"] else POP_MEAN["cadence_mean"]
+        cadence_std = float(np.mean(hist["cadence_std"])) if hist["cadence_std"] else POP_STD["cadence_std"]
     duration = event.session_duration_sec
 
     def z(key, value):
@@ -137,9 +149,13 @@ def score_session(event: SessionEvent):
 
     # Update history AFTER scoring -- this session must never be part
     # of its own baseline. Typical hour drifts slowly toward new
-    # sessions rather than being overwritten outright.
-    hist["cadence_mean"].append(cadence_mean)
-    hist["cadence_std"].append(cadence_std)
+    # sessions rather than being overwritten outright. Only sessions
+    # with real typing contribute to the cadence baseline -- a
+    # keystroke-less session has no signal worth remembering, and
+    # feeding it back in would slowly drag the baseline toward zero.
+    if has_keystrokes:
+        hist["cadence_mean"].append(cadence_mean)
+        hist["cadence_std"].append(cadence_std)
     hist["session_duration_sec"].append(duration)
     hist["typical_hour"] = (hist["typical_hour"] * 0.8) + (event.hour_of_day * 0.2)
 
@@ -205,7 +221,12 @@ def get_personalization(user_id: str):
     """Returns the precomputed archetype + nudge-relevant profile for the dashboard."""
     profile = PROFILES.get(user_id)
     if profile is None:
-        return {"error": "no profile found for this user_id"}
+        # A 200 with an {"error": ...} body looks like a success to any
+        # client that only checks the HTTP status (ours does) -- it
+        # would silently render a broken personalization card instead
+        # of failing loudly. A real 404 lets callers tell "no profile
+        # yet" apart from "this worked".
+        raise HTTPException(status_code=404, detail=f"no personalization profile found for user_id={user_id!r}")
     return profile
 
 
